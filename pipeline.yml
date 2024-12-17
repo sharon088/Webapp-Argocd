@@ -1,0 +1,64 @@
+# This is a basic workflow to help you get started with Actions
+
+name: ArgoCD_Build_Pipeline
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: fetch git tag
+        run: git fetch --tags 
+
+      - name: Tag version
+        id: version
+        uses: bitshifted/git-auto-semver@v1
+        with:
+          main_branch: main
+          create_tag: true
+          tag_prefix: v
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          logout: true
+
+      - name: Build and push to registry
+        uses: docker/build-push-action@v6
+        with:
+         context: .
+         push: true
+         tags: sharon088/weather_app_image:${{ steps.version.outputs.version-string }}
+
+      - name: update manifest file
+        run: |
+          sed -i 's|image: sharon088/weather_app_image:.*|image: sharon088/weather_app_image:${{ steps.version.outputs.version-string }}|' manifests/webapp_weather.yaml
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.name "GitHub Actions"
+          git config --local user.email "actions@github.com"
+          git add manifests/webapp_weather.yaml
+          git commit -m " Update image to latest version [skip ci]"
+          git pull origin main --rebase
+          git push origin HEAD:main
