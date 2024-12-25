@@ -52,7 +52,12 @@ jobs:
 
       - name: update manifest file
         run: |
-          sed -i 's|image: sharon088/weather_app_image:.*|image: sharon088/weather_app_image:${{ steps.version.outputs.version-string }}|' manifests/webapp_weather.yaml
+          if [ -f manifests/webapp_weather.yaml ]; then
+            sed -i 's|image: sharon088/weather_app_image:.*|image: sharon088/weather_app_image:${{ steps.version.outputs.version-string }}|' manifests/webapp_weather.yaml
+          else
+            echo "Error: manifest file not found"
+            exit 1
+          fi
 
       - name: Commit and push changes
         run: |
