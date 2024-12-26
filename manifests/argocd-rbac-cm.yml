@@ -16,5 +16,5 @@ data:
   policy.csv: |
     p, role:readonly, applications, get, */*, allow
     p, role:read-only, applications, list, */*, allow
-    g, sharon-test, role:readonly
+    g, sharon-role, role:readonly
 
